@@ -23,7 +23,7 @@ Written by SA5MOG Magnus Öberg (Moggen)
 The main idea of this program is to implement a parameterized bandpass
 filter using the Adafruit Trinket M0 module.
 
-The ATSAMD15 CPU does not have hardware support for floating point.
+The ATSAMD21E18 CPU does not have hardware support for floating point.
 This means that code using floating point will be (very) slow on this
 platform. Fixed point integer arithmetic needs to be used to get
 any reasonable calculation performance.
