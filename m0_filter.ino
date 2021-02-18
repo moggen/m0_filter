@@ -1,6 +1,6 @@
 /*
 --------------------------------------------------------------------------
-Copyright 2020 Magnus Öberg
+Copyright 2020, 2021 Magnus Öberg
 
 Permission to use, copy, modify, and/or distribute this software for
 any purpose with or without fee is hereby granted, provided that the
@@ -274,9 +274,13 @@ void prepare_fir(int32_t *fir, float freq1, float freq2) {
 // Init routine, run once after boot
 void setup() {
 
-  // Start by initialize the DotStar RGB and switch it off
+  // Start by initialize the DotStar RGB and switch it off.
+  // The DotStar LED is causing a small interference on the ADC
+  // sampling, so we want to keep it off under normal operating
+  // conditions.
   strip.begin();
   strip.setBrightness(50);  // Adjust here if it is to bright or dull
+  strip.setPixelColor(0, 0, 0, 0);  // Black = off
   strip.show();
 
   // Init buffers
@@ -609,9 +613,25 @@ void loop() {
     Serial.print(" us,  gain: ");
     Serial.print(g_acc);
     Serial.print("\n");
+
+    Serial.print("[");
+    for(int i=0; i<FIR_LEN_TABLE; i++) {
+      Serial.print(fir[i]);
+      Serial.print(", ");
+    }
+    Serial.print("]\n");
+
   #endif
 
-  // Update DotStar RGB LED
+  // Update DotStar RGB LED. The LED is used to show if we are
+  // getting near saturation/clipping. Enabling the DotStar
+  // may create a small audible interference on the input sampling.
+  // It is most likely caused by the DotStar's built in PWM driver
+  // switching the LEDs on and off at about 400 Hz. The frequency
+  // seems to be affected by the temperature, so the interference
+  // is drifting around, and this is noticeable at high gain.
+  // Adjust the gain so that the LED is dark most of the time to
+  // get the best quality output audio.
   if(output_error_ticks < 2000) {
     // We have seen error conditions during the last 0.1s
     strip.setPixelColor(0, 255, 0, 0);  // Angry red color on RGB LED
@@ -619,8 +639,8 @@ void loop() {
     // We have seen warning conditions during the last 0.1s
     strip.setPixelColor(0, 191, 191, 0);  // Yellow color
   } else {
-    // All ok
-    strip.setPixelColor(0, 0, 150, 0);  // Happy green color
+    // All ok, switch the LEDs off to avoid interference on the input
+    strip.setPixelColor(0, 0, 0, 0);  // All off, dark means good signal
   }
   strip.show();
 }
