@@ -571,18 +571,23 @@ void loop() {
 
   // Handle gain input and activate it
   float g_in = (float)p_gain;
-  g_acc = 0.5f * g_acc + 0.5f * g_in;
+  g_acc = 0.8f * g_acc + 0.2f * g_in;
   gain = (uint32_t)g_acc;
 
   // Translate frequency potentiometer input to frequencies
   // Lower frequency f1 range 50-1000 Hz
   float f1_in = 50.0f + 950.0f * (float)p_f1 / 1024.0f;
-  f1_acc = 0.5f * f1_acc + 0.5f * f1_in;
+  f1_acc = 0.8f * f1_acc + 0.2f * f1_in;
   float f1 = f1_acc;
 
-  // Upper frequency f2 range 400-4000Hz
-  float f2_in = 400.0f + 3600.0f * (float)p_f2 / 1024.0f;
-  f2_acc = 0.5f * f2_acc + 0.5f * f2_in;
+  // Upper frequency f2 range split in two halves 400-1000Hz and 1000-4000Hz
+  float f2_in = (float)p_f2 / 1024.0f;
+  if(f2_in < 0.5f) {
+    f2_in = 400.0f + 1200.0f * f2_in; // 0.0 < f2_in < 0.5
+  } else {
+    f2_in = -2000.0f + 6000.0f * f2_in; // 0.5 < f2_in < 1.0
+  }
+  f2_acc = 0.8f * f2_acc + 0.2f * f2_in;
   float f2 = f2_acc;
 
   // Special CW mode if f2 < 1000
