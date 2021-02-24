@@ -65,7 +65,9 @@ The range for all pins are GND to VDD (3.3V). Analog input protection
 diodes are highly recommended. Potentiomenters are typically linear 10kOhm
 */
 
-// Uncomment to enable debug output on the virtual USB serial port
+#define VERSION "1.1"
+
+// Uncomment to enable additional debug output on the virtual USB serial port
 //#define DEBUG 1
 
 #include <Adafruit_DotStar.h>
@@ -127,8 +129,7 @@ volatile uint32_t output_warning_ticks = 65000;
 
 // Some timing for debug messages
 #ifdef DEBUG
-  volatile unsigned long timing = 0;
-  volatile unsigned long lastt = 0;
+  volatile unsigned long timing = 0, last_timing = 0, interrupt_timing = 0;
 #endif
 
 // Hamming window function using floating points.
@@ -395,9 +396,9 @@ void sample_event()
 {
   // Keep track of timing for debugging purposes.
   #ifdef DEBUG
-    unsigned long nowt = micros();
-    timing = nowt - lastt;
-    lastt = nowt;
+    unsigned long now_timing = micros();
+    timing = now_timing - last_timing;
+    last_timing = now_timing;
   #endif
 
   // Start by initiate a ADC operation immediately followed by DAC
@@ -536,34 +537,20 @@ void sample_event()
   // Pre-set MUX to A1 so that we can start sampling immediately at next interrupt
   ADC->INPUTCTRL.bit.MUXPOS = g_APinDescription[A1].ulADCChannelNumber;
   ADC_SYNC();
+
+  // Keep track of timing for debugging purposes.
+  #ifdef DEBUG
+    now_timing = micros();
+    interrupt_timing = now_timing - last_timing;
+  #endif
 }
 
 // The background loop!
 void loop() {
 
-  #ifdef DEBUG
-    // Some timer loop debug info
-    Serial.print("Per sample loop time: ");
-    Serial.print(timing);
-    Serial.print(" us,  ADC wait count 1: ");
-    Serial.print(cnt);
-    Serial.print(",  count 2: ");
-    Serial.print(cnt2);
-    Serial.print("\n");
-    Serial.print("Sample: ");
-    Serial.print(s);
-    Serial.print("\n");
-    Serial.print("Potentiometers: Gain: ");
-    Serial.print(p_gain);
-    Serial.print(",  f1: ");
-    Serial.print(p_f1);
-    Serial.print(",  f2: ");
-    Serial.print(p_f2);
-    Serial.print("\n");
-
-    // Measure timing
-    unsigned long filter_startt = micros();
-  #endif
+  // Measure timing
+  unsigned long loop_start_timer = micros();
+  static unsigned long output_last_timer = 0;
 
   // Potientiometer input is filtered to remove noise.
   // Accumulation buffers:
@@ -605,29 +592,6 @@ void loop() {
   // Make the new filter live. 32 bit volatile pointer writes and reads are assumed to be atomic!
   fir = new_fir;
 
-  #ifdef DEBUG
-    // More timing
-    unsigned long filter_endt = micros();
-
-    Serial.print("FIR f1: ");
-    Serial.print(f1);
-    Serial.print(",  f2: ");
-    Serial.print(f2);
-    Serial.print(",  calc. time: ");
-    Serial.print(filter_endt - filter_startt);
-    Serial.print(" us,  gain: ");
-    Serial.print(g_acc);
-    Serial.print("\n");
-
-    Serial.print("[");
-    for(int i=0; i<FIR_LEN_TABLE; i++) {
-      Serial.print(fir[i]);
-      Serial.print(", ");
-    }
-    Serial.print("]\n");
-
-  #endif
-
   // Update DotStar RGB LED. The LED is used to show if we are
   // getting near saturation/clipping. Enabling the DotStar
   // may create a small audible interference on the input sampling.
@@ -648,4 +612,59 @@ void loop() {
     strip.setPixelColor(0, 0, 0, 0);  // All off, dark means good signal
   }
   strip.show();
+
+  // More timing
+  unsigned long loop_end_timer = micros();
+
+  // Only print on virtual serial port every 0.5s
+  if(loop_start_timer > output_last_timer + 500000 ||
+     loop_start_timer < output_last_timer) {
+
+    output_last_timer = loop_start_timer;
+
+    Serial.print("m0_filter v" VERSION ": gain=");
+    Serial.print(g_acc/32.0f);
+    Serial.print(", f1=");
+    Serial.print(f1);
+    Serial.print(", f2=");
+    Serial.print(f2);
+    Serial.print("\n");
+
+    #ifdef DEBUG
+    Serial.print("Interrupt separation time: ");
+    Serial.print(timing);
+    Serial.print(" us, duration: ");
+    Serial.print(interrupt_timing);
+    Serial.print(" us,  ADC wait count 1: ");
+    Serial.print(cnt);
+    Serial.print(",  count 2: ");
+    Serial.print(cnt2);
+    Serial.print("\n");
+
+    Serial.print("Sample: ");
+    Serial.print(s);
+    Serial.print("\n");
+    Serial.print("Potentiometers: Gain: ");
+    Serial.print(p_gain);
+    Serial.print(",  f1: ");
+    Serial.print(p_f1);
+    Serial.print(",  f2: ");
+    Serial.print(p_f2);
+    Serial.print("\n");
+
+    Serial.print("Calc. time: ");
+    Serial.print(loop_end_timer - loop_start_timer);
+    Serial.print(" us\n");
+
+    Serial.print("FIR taps:\n[");
+    for(int i=0; i<FIR_LEN_TABLE; i++) {
+      if(i%15 == 14)
+        Serial.print("\n");
+      Serial.print(fir[i]);
+      Serial.print(", ");
+    }
+    Serial.print("]\n");
+
+    #endif
+  }
 }
