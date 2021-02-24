@@ -44,7 +44,7 @@ sample, and once for one of the potentiometers (in a round-robin scheme)
 The background loop is continously running generation of new filter
 attributes based on the potentiometer samplings made by the timer
 loop. This loop is more relaxed, and a few float operations will be
-acceptable. But the response when adjusting the potentiometers will be 
+acceptable. But the response when adjusting the potentiometers will be
 sluggish if this loop is too slow, so some fixed point math is needed
 here as well.
 
@@ -312,7 +312,7 @@ void setup() {
   // Switch off pin 13 LED
   pinMode(13, OUTPUT);
   digitalWrite(13, LOW);
-  
+
   // This part overrides ADC parameters manually. The Arduino environment has nice
   // support for AD conversion, but it contains lots of checking code to make
   // sure that pin modes are set etc. every time we sample. We do not need that
@@ -324,7 +324,7 @@ void setup() {
   // Set sampling time length. This will determine the input impedance.
   // See this excellent calculator (and her other posts):
   // https://blog.thea.codes/getting-the-most-out-of-the-samd21-adc/
-  
+
   // Length 14 gives an impedance of about 155 kOhm and this will work
   // great with 10 kOhm potentiometers.
 
@@ -347,7 +347,7 @@ void setup() {
   GCLK->CLKCTRL.reg = (uint16_t) (GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 | GCLK_CLKCTRL_ID(GCM_TC4_TC5)) ;
   GCLK_SYNC();
 
-  // Reset TC5 
+  // Reset TC5
   TC5->COUNT16.CTRLA.reg = TC_CTRLA_SWRST;
   TC5_SYNC();
 
@@ -355,7 +355,7 @@ void setup() {
   while(TC5->COUNT16.CTRLA.bit.SWRST){};
 
   // Configure TC5
-  TC5->COUNT16.CTRLA.reg = 
+  TC5->COUNT16.CTRLA.reg =
     TC_CTRLA_MODE_COUNT16 |    // 16 bit counter
     TC_CTRLA_WAVEGEN_MFRQ |    // Match frequency mode
     TC_CTRLA_PRESCALER_DIV1 |  // Prescaler 1 (giving 48MHz)
@@ -366,7 +366,7 @@ void setup() {
 
   // Get in sync
   TC5_SYNC();
- 
+
   // Configure interrupt settings for TC5
   NVIC_DisableIRQ(TC5_IRQn);
   NVIC_ClearPendingIRQ(TC5_IRQn);
@@ -400,7 +400,7 @@ void sample_event()
     lastt = nowt;
   #endif
 
-  // Start by initiate a ADC operation immediately followed by DAC 
+  // Start by initiate a ADC operation immediately followed by DAC
   // output of the calulated sample from the last event. This will
   // minimize jitter on both ADC and DAC.
 
@@ -428,7 +428,7 @@ void sample_event()
   for(; i<(FIR_LEN>>2); i++, n++, n2--) {
     // Convolution. Multiply and accumulate. Take advantage
     // of the symmetry to do two values at the same time.
-    acc += (samples[n] + samples[n2]) * fir[i]; 
+    acc += (samples[n] + samples[n2]) * fir[i];
   }
 
   // The ADC should have had time to finish now. Do the follow up
