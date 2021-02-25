@@ -65,7 +65,7 @@ The range for all pins are GND to VDD (3.3V). Analog input protection
 diodes are highly recommended. Potentiomenters are typically linear 10kOhm
 */
 
-#define VERSION "1.1"
+#define VERSION "1.2"
 
 // Uncomment to enable additional debug output on the virtual USB serial port
 //#define DEBUG 1
@@ -556,11 +556,6 @@ void loop() {
   // Accumulation buffers:
   static float g_acc = 0.0f, f1_acc = 0.0f, f2_acc = 0.0f;
 
-  // Handle gain input and activate it
-  float g_in = (float)p_gain;
-  g_acc = 0.8f * g_acc + 0.2f * g_in;
-  gain = (uint32_t)g_acc;
-
   // Translate frequency potentiometer input to frequencies
   // Lower frequency f1 range 50-1000 Hz
   float f1_in = 50.0f + 950.0f * (float)p_f1 / 1024.0f;
@@ -581,6 +576,18 @@ void loop() {
   if(f2 < 1000.0f) {
     // f2 is below 1000 Hz, fixed 100Hz bandwidth for CW
     f1 = f2 - 100.0f;
+  }
+
+  // Handle gain input and activate it
+  float g_in = (float)p_gain;
+  g_acc = 0.8f * g_acc + 0.2f * g_in;
+
+  if(f2 < 1000.0f) {
+    // CW mode, compensate for low volume with +6dB
+    gain = (uint32_t)g_acc * 2.0f;
+  } else {
+    // Lowpass mode
+    gain = (uint32_t)g_acc;
   }
 
   // Get the FIR tap buffer not currently in use
